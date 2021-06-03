@@ -1,8 +1,10 @@
 const util = require('util');
+const childProcess = require('child_process');
 const { ChronoUnit, DateTimeFormatter, OffsetDateTime } = require('@js-joda/core');
-const exec = util.promisify(require('child_process').exec);
+const yargs = require('yargs/yargs');
+const { hideBin } = require('yargs/helpers');
 
-
+const exec = util.promisify(childProcess.exec);
 const offsetFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
 
 const getLogs = async (period) => {
@@ -99,4 +101,19 @@ const report = async ({ period, verbose }) => {
 	log(calculateDaySums(aggregatedDays), verbose);
 }
 
-report({ period: '4d', verbose: false });
+const argv = yargs(hideBin(process.argv))
+	.option('verbose', {
+		alias: 'v',
+		type: 'boolean',
+		default: false,
+		description: 'Run with verbose logging'
+	})
+	.option('period', {
+		alias: 'p',
+		type: 'string',
+		default: '2d',
+		description: 'Period to aggregate'
+	})
+	.argv
+
+report({ period: argv.period, verbose: argv.verbose });
