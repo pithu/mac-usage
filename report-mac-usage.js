@@ -3,13 +3,12 @@ const { ChronoUnit, DateTimeFormatter, OffsetDateTime } = require('@js-joda/core
 const exec = util.promisify(require('child_process').exec);
 
 
-const PERIOD = '3d'
-const SEARCH_FOR = 'going inactive, create activity semaphore|releasing the activity semaphore'
-const CMD = `log show --style syslog --predicate 'process == \"loginwindow\"' --debug --info --last ${PERIOD} | grep -E \"${SEARCH_FOR}\" | cut -c '1-32 141-155'`
 const offsetFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
 
-const getLogs = async () => {
-	const { stdout, stderr } = await exec(CMD);
+const getLogs = async (period) => {
+	const searchFor = 'going inactive, create activity semaphore|releasing the activity semaphore'
+	const cmd = `log show --style syslog --predicate 'process == \"loginwindow\"' --debug --info --last ${period} | grep -E \"${searchFor}\" | cut -c '1-32 141-155'`
+	const { stdout, stderr } = await exec(cmd);
 	if (stderr) {
 		throw new Error(stderr);
 	}
@@ -81,24 +80,23 @@ const calculateDaySums = (aggregatedDays) => {
 }
 
 
-const report = (aggregatedDays) => {
+const log = (aggregatedDays, verbose) => {
 	for (const [date, aggregate] of Object.entries(aggregatedDays)) {
-		console.log(
-			`date: ${date} usage: ${aggregate.time} (${aggregate.secs} seconds), activities:`,
-			aggregate.activities.map(
+		console.log(`date: ${date} usage: ${aggregate.time} (${aggregate.secs} seconds)`)
+		if (verbose)
+			console.log('activities:', aggregate.activities.map(
 				activity =>
 					`on: ${activity.on.toString()}, off: ${activity.off.toString()}, time: ${activity.time}`
-			)
-		)
+			))
 	}
 }
 
-const main = async () => {
-	const logs = await getLogs();
+const report = async ({ period, verbose }) => {
+	const logs = await getLogs(period);
 	const rows = mapToOffsetTime(logs);
-	rows.forEach(row => console.log(row.active, row.odt.toString()));
+	// rows.forEach(row => console.log(row.active, row.odt.toString()));
 	const aggregatedDays = aggregateDays(rows);
-	report(calculateDaySums(aggregatedDays));
+	log(calculateDaySums(aggregatedDays), verbose);
 }
 
-main();
+report({ period: '4d', verbose: false });
