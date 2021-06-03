@@ -1,0 +1,14 @@
+{
+  "name": "report-mac-usage-time",
+  "version": "1.0.0",
+  "description": "",
+  "main": "report-mac-usage.js",
+  "scripts": {
+    "report": "node report-mac-usage.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@js-joda/core": "^3.2.0"
+  }
+}
