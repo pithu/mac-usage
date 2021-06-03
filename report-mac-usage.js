@@ -25,38 +25,48 @@ const mapToOffsetTime = (logs) =>
 
 const secsToTimeString = (secs) => new Date(secs * 1000).toISOString().substr(11, 8)
 
+const createActivity = (onOdt, offOdt) => {
+	const seconds = onOdt.until(offOdt, ChronoUnit.SECONDS);
+	const time = secsToTimeString(seconds);
+	return {
+		on: onOdt,
+		off: offOdt,
+		seconds,
+		time,
+	};
+}
+
 const aggregateDays = (rows) => {
 	let state = 'OFF';
-	let currentOn = null;
+	let currentOnOdt = null;
+	let ld = null;
 	const aggregatedDays = {};
 	rows.forEach(row => {
-		const ld = row.odt.toLocalDate().toString();
-		if (!aggregatedDays[ld]) {
-			aggregatedDays[ld] = { activities: [] };
+		if (!ld) {
+			ld = row.odt.toLocalDate().toString();
+			if (!aggregatedDays[ld]) {
+				aggregatedDays[ld] = { activities: [] };
+			}
 		}
 		if (state === 'OFF') {
 			if (row.active) {
 				state = 'ON';
-				if (!currentOn) {
-					currentOn = row.odt;
+				if (!currentOnOdt) {
+					currentOnOdt = row.odt;
 				}
 			}
 		} else if (state === 'ON') {
 			if (!row.active) {
 				state = 'OFF';
-				const seconds = currentOn.until(row.odt, ChronoUnit.SECONDS);
-				const time = secsToTimeString(seconds);
-
-				aggregatedDays[ld].activities.push({
-					on: currentOn,
-					off: row.odt,
-					seconds,
-					time,
-				})
-				currentOn = null;
+				aggregatedDays[ld].activities.push(createActivity(currentOnOdt, row.odt));
+				currentOnOdt = null;
+				ld = null;
 			}
 		}
 	})
+	if (state === 'ON' && currentOnOdt) {
+		aggregatedDays[ld].activities.push(createActivity(currentOnOdt, OffsetDateTime.now()));
+	}
 	return aggregatedDays;
 }
 
@@ -72,11 +82,14 @@ const calculateDaySums = (aggregatedDays) => {
 
 
 const report = (aggregatedDays) => {
-	for (const [key, value] of Object.entries(aggregatedDays)) {
-		console.log('date:      ', key, value.secs, value.time);
-		console.log('activities:', value.activities.map(
-			activity =>
-				`on: ${activity.on.toString()}, off: ${activity.off.toString()}, time: ${activity.time}`))
+	for (const [date, aggregate] of Object.entries(aggregatedDays)) {
+		console.log(
+			`date: ${date} usage: ${aggregate.time} (${aggregate.secs} seconds), activities:`,
+			aggregate.activities.map(
+				activity =>
+					`on: ${activity.on.toString()}, off: ${activity.off.toString()}, time: ${activity.time}`
+			)
+		)
 	}
 }
 
