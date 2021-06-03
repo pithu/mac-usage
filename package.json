@@ -7,7 +7,7 @@
     "report": "node report-mac-usage.js"
   },
   "author": "",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "dependencies": {
     "@js-joda/core": "^3.2.0"
   }
